@@ -8,7 +8,10 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
     const filename = downloadItem.filename.toLowerCase();
     
     // Проверяем расширение файла
-    if (filename.match(/\.(pdf|docx|xlsx|xls|png|jpeg|jpg)$/i)) {
+    // Проверяем, что файл скачивается именно из мессенджера MAX
+    const isMaxDomain = downloadItem.url.includes('web.max.ru') || (downloadItem.referrer && downloadItem.referrer.includes('web.max.ru'));
+    
+    if (isMaxDomain && filename.match(/\.(pdf|docx|xlsx|xls|png|jpeg|jpg)$/i)) {
         // Отменяем системное скачивание файла
         chrome.downloads.cancel(downloadItem.id, () => {
             // Открываем нашу вкладку предпросмотра
