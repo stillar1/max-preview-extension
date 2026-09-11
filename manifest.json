@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "MAX File Previewer",
+  "version": "1.0",
+  "description": "Предпросмотр файлов (DOCX, XLSX, PDF, Картинки) для мессенджера MAX вместо скачивания",
+  "permissions": ["tabs", "downloads"],
+  "host_permissions": ["*://web.max.ru/*"],
+  "content_scripts": [
+    {
+      "matches": ["*://web.max.ru/*"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["viewer/viewer.html", "viewer/viewer.js", "viewer/viewer.css", "viewer/libs/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
