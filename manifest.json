@@ -31,7 +31,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["viewer/viewer.html", "viewer/viewer.js", "viewer/viewer.css", "viewer/libs/*"],
+      "resources": ["viewer/viewer.html", "viewer/viewer.js", "viewer/viewer.css", "viewer/libs/*", "viewer/libs/luckysheet/*", "viewer/libs/luckysheet/assets/iconfont/*"],
       "matches": ["<all_urls>"]
     }
   ]

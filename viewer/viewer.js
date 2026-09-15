@@ -55,10 +55,24 @@ async function loadFile() {
             await docx.renderAsync(blob, container);
         } else if (ext === 'xlsx' || ext === 'xls') {
             const container = document.getElementById('excel-container');
-            container.style.display = 'flex';
-            const arrayBuffer = await blob.arrayBuffer();
-            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-            renderExcel(workbook);
+            container.style.display = 'block';
+            
+            const file = new File([blob], fileName, {type: mimeType});
+            LuckyExcel.transformExcelToLucky(file, function(exportJson, luckysheetfile){
+                if(exportJson.sheets == null || exportJson.sheets.length == 0){
+                    throw new Error("Ошибка чтения excel файла!");
+                }
+                
+                window.luckysheet.destroy();
+                window.luckysheet.create({
+                    container: 'luckysheet', // container id
+                    data: exportJson.sheets,
+                    title: (exportJson.info && exportJson.info.name) ? exportJson.info.name : fileName,
+                    userInfo: (exportJson.info && exportJson.info.creator) ? exportJson.info.creator : '',
+                    showinfobar: false,
+                    lang: 'ru'
+                });
+            });
         } else {
             throw new Error("Неподдерживаемый формат: " + ext);
         }
@@ -66,55 +80,6 @@ async function loadFile() {
         console.error(e);
         loadingEl.innerHTML = `<span style="color:red; font-weight:bold;">Ошибка:</span><br>${e.message}`;
     }
-}
-
-function renderExcel(workbook) {
-    const tabsContainer = document.getElementById('excel-tabs');
-    const gridContainer = document.getElementById('excel-grid');
-    let tabulatorInstance = null;
-
-    workbook.SheetNames.forEach((sheetName, index) => {
-        const tab = document.createElement('div');
-        tab.className = 'excel-tab' + (index === 0 ? ' active' : '');
-        tab.textContent = sheetName;
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.excel-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            loadSheet(sheetName);
-        });
-        tabsContainer.appendChild(tab);
-    });
-
-    function loadSheet(sheetName) {
-        const worksheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
-        if (json.length === 0) {
-            if (tabulatorInstance) tabulatorInstance.destroy();
-            gridContainer.innerHTML = '<div style="padding: 20px;">Пустой лист</div>';
-            return;
-        }
-
-        let headers = json[0];
-        let data = json.slice(1);
-        let maxCols = 0;
-        json.forEach(row => { if (row.length > maxCols) maxCols = row.length; });
-        
-        const columns = [];
-        for (let i = 0; i < maxCols; i++) {
-            const titleText = headers[i] !== undefined && headers[i] !== "" ? String(headers[i]) : "Колонка " + (i+1);
-            columns.push({ title: titleText, field: "col" + i, headerFilter: "input", widthGrow: 1 });
-        }
-        
-        const tableData = data.map(row => {
-            const rowData = {};
-            for (let i = 0; i < maxCols; i++) { rowData["col" + i] = row[i]; }
-            return rowData;
-        });
-
-        if (tabulatorInstance) tabulatorInstance.destroy();
-        tabulatorInstance = new Tabulator(gridContainer, { data: tableData, columns: columns, layout: "fitDataFill", height: "100%", placeholder: "Нет данных" });
-    }
-    if (workbook.SheetNames.length > 0) loadSheet(workbook.SheetNames[0]);
 }
 
 // Запускаем файл сразу без кнопки

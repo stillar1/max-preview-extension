@@ -18,9 +18,11 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
             const viewerUrl = chrome.runtime.getURL(`viewer/viewer.html?url=${encodeURIComponent(downloadItem.url)}&name=${encodeURIComponent(downloadItem.filename)}`);
             chrome.tabs.create({ url: viewerUrl });
         });
+        return true; // ВАЖНО: возвращаем true, чтобы браузер ждал и не показывал диалог сохранения
     }
     
     suggest();
+    return false;
 });
 
 // На всякий случай оставляем и старый слушатель сообщений, если понадобится
