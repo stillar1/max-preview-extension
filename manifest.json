@@ -34,5 +34,8 @@
       "resources": ["viewer/viewer.html", "viewer/viewer.js", "viewer/viewer.css", "viewer/libs/*", "viewer/libs/luckysheet/*", "viewer/libs/luckysheet/assets/iconfont/*"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "sandbox": {
+    "pages": ["viewer/luckysheet_iframe.html"]
+  }
 }

@@ -2,6 +2,15 @@ const urlParams = new URLSearchParams(window.location.search);
 const fileUrl = urlParams.get('url');
 let fileName = urlParams.get('name') || 'Document';
 
+window.onerror = function(msg, url, lineNo, columnNo, error) {
+    const loadingEl = document.getElementById('loading');
+    if(loadingEl) {
+        loadingEl.style.display = 'block';
+        loadingEl.innerHTML = `<span style="color:red; font-weight:bold;">Global Error:</span><br>${msg}<br>Line: ${lineNo}`;
+    }
+    return false;
+};
+
 const extMatch = fileName.match(/\.([a-zA-Z0-9]+)$/);
 let ext = extMatch ? extMatch[1].toLowerCase() : '';
 if (!ext) {
@@ -12,7 +21,12 @@ if (!ext) {
 document.getElementById('fileName').textContent = fileName;
 
 document.getElementById('downloadBtn').addEventListener('click', () => {
-    chrome.downloads.download({ url: fileUrl, filename: fileName });
+    const a = document.createElement('a');
+    a.href = fileUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 });
 
 async function loadFile() {
@@ -54,8 +68,8 @@ async function loadFile() {
             container.style.display = 'block';
             await docx.renderAsync(blob, container);
         } else if (ext === 'xlsx' || ext === 'xls') {
-            const container = document.getElementById('excel-container');
-            container.style.display = 'block';
+            const iframe = document.getElementById('luckysheet-iframe');
+            iframe.style.display = 'block';
             
             const file = new File([blob], fileName, {type: mimeType});
             LuckyExcel.transformExcelToLucky(file, function(exportJson, luckysheetfile){
@@ -63,15 +77,19 @@ async function loadFile() {
                     throw new Error("Ошибка чтения excel файла!");
                 }
                 
-                window.luckysheet.destroy();
-                window.luckysheet.create({
-                    container: 'luckysheet', // container id
-                    data: exportJson.sheets,
-                    title: (exportJson.info && exportJson.info.name) ? exportJson.info.name : fileName,
-                    userInfo: (exportJson.info && exportJson.info.creator) ? exportJson.info.creator : '',
-                    showinfobar: false,
-                    lang: 'ru'
-                });
+                const sendData = () => {
+                    iframe.contentWindow.postMessage({
+                        action: 'loadExcel',
+                        sheets: exportJson.sheets,
+                        title: (exportJson.info && exportJson.info.name) ? exportJson.info.name : fileName,
+                        userInfo: (exportJson.info && exportJson.info.creator) ? exportJson.info.creator : ''
+                    }, '*');
+                };
+                
+                // Песочница не позволяет читать свойства iframe напрямую, поэтому просто ждем загрузки или отправляем сразу (браузер обычно кэширует postMessage, но лучше перестраховаться таймером, если onload уже прошел)
+                iframe.addEventListener('load', sendData, { once: true });
+                // Если iframe уже загрузился до того, как мы повесили обработчик
+                setTimeout(sendData, 500);
             });
         } else {
             throw new Error("Неподдерживаемый формат: " + ext);
