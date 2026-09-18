@@ -3,12 +3,21 @@
   "name": "MAX File Previewer",
   "version": "1.0",
   "description": "Предпросмотр файлов (DOCX, XLSX, PDF, Картинки) для мессенджера MAX вместо скачивания",
-  "permissions": ["tabs", "downloads"],
-  "host_permissions": ["*://web.max.ru/*"],
+  "permissions": [
+    "tabs",
+    "downloads"
+  ],
+  "host_permissions": [
+    "*://web.max.ru/*"
+  ],
   "content_scripts": [
     {
-      "matches": ["*://web.max.ru/*"],
-      "js": ["content.js"],
+      "matches": [
+        "*://web.max.ru/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_end"
     }
   ],
@@ -31,11 +40,17 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["viewer/viewer.html", "viewer/viewer.js", "viewer/viewer.css", "viewer/libs/*", "viewer/libs/luckysheet/*", "viewer/libs/luckysheet/assets/iconfont/*"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "viewer/viewer.html",
+        "viewer/viewer.js",
+        "viewer/viewer.css",
+        "viewer/libs/*",
+        "viewer/libs/luckysheet/*",
+        "viewer/libs/luckysheet/assets/iconfont/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
-  ],
-  "sandbox": {
-    "pages": ["viewer/luckysheet_iframe.html"]
-  }
+  ]
 }

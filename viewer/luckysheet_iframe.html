@@ -4,8 +4,10 @@
     <meta charset="utf-8">
     <link href="libs/luckysheet/plugins/css/pluginsCss.css" rel="stylesheet">
     <link href="libs/luckysheet/css/luckysheet.css" rel="stylesheet">
+    <link href="libs/luckysheet/assets/iconfont/iconfont.css" rel="stylesheet">
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        /* Принудительно скроем свой лоадер если luckysheet зависнет */
     </style>
 </head>
 <body>
@@ -13,20 +15,6 @@
     
     <script src="libs/luckysheet/plugins/js/plugin.js"></script>
     <script src="libs/luckysheet/luckysheet.umd.js"></script>
-    <script>
-        window.addEventListener('message', (event) => {
-            if (event.data.action === 'loadExcel') {
-                try { window.luckysheet.destroy(); } catch(e) {}
-                window.luckysheet.create({
-                    container: 'luckysheet',
-                    data: event.data.sheets,
-                    title: event.data.title,
-                    userInfo: event.data.userInfo,
-                    showinfobar: false,
-                    lang: 'ru'
-                });
-            }
-        });
-    </script>
+    <script src="luckysheet_init.js"></script>
 </body>
 </html>
