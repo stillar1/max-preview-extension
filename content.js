@@ -51,60 +51,78 @@ function getCssPath(el) {
     return path.join(" > ");
 }
 
+
+
 // Запоминаем последний клик в левой части экрана (список чатов)
 document.addEventListener('click', (e) => {
     try {
         if (chrome && chrome.storage && chrome.storage.local) {
             chrome.storage.local.set({ max_last_click: Date.now() });
         }
-    } catch (err) { console.error(err); }
+    } catch (err) {}
 
     try {
-        // Обрабатываем авто-открытие чата (левая половина экрана)
         if (e.clientX < window.innerWidth * 0.5) {
             let target = e.target.closest('a') || e.target.closest('li') || e.target.closest('[class*="item"]') || e.target;
             
-            let path = getCssPath(target);
-            if (path) {
-                localStorage.setItem('max_last_chat_path', path);
+            // Берем самую первую непустую строку текста
+            let textLines = target.innerText ? target.innerText.split('\n').map(s=>s.trim()).filter(s=>s) : [];
+            if (textLines.length > 0) {
+                let text = textLines[0];
+                if (text.length >= 2 && text.length < 50) {
+                    localStorage.setItem('max_last_chat_text', text);
+                }
             }
             
-            let text = target.innerText ? target.innerText.trim().split('\n')[0] : '';
-            if (text && text.length > 2 && text.length < 50) {
-                localStorage.setItem('max_last_chat_text', text);
-            }
+            // Сохраняем URL через секунду, если он изменился (для SPA)
+            setTimeout(() => {
+                if (location.pathname.length > 2 || location.hash.length > 2) {
+                    localStorage.setItem('max_last_url', location.href);
+                }
+            }, 1000);
         }
     } catch (err) { console.error(err); }
 }, true);
 
 // Восстанавливаем при загрузке
 window.addEventListener('load', () => {
-    // Повторяем попытки клика, так как React/Vue могут рендериться с задержкой
+    // 1. Пытаемся восстановить по URL (если при обновлении скинуло на главную)
+    let lastUrl = localStorage.getItem('max_last_url');
+    if (lastUrl && lastUrl !== location.href && (location.pathname === '/' || location.pathname === '' || location.pathname === '/messages')) {
+        location.href = lastUrl;
+        return; // Если редирект сработал, дальше не идем
+    }
+
+    // 2. Пытаемся восстановить кликом по тексту в DOM
+    let text = localStorage.getItem('max_last_chat_text');
+    if (!text) return;
+
     let attempts = 0;
     let interval = setInterval(() => {
         attempts++;
-        if (attempts > 10) { // 10 попыток по 500мс = 5 секунд
+        if (attempts > 15) { // 15 попыток = 7.5 секунд
             clearInterval(interval);
             return;
         }
         
-        let path = localStorage.getItem('max_last_chat_path');
-        let text = localStorage.getItem('max_last_chat_text');
         let target = null;
         
-        if (path) {
-            try { target = document.querySelector(path); } catch (e) {}
-        }
-        
-        if (!target && text) {
-            let elements = document.evaluate(`//div[text()='${text}'] | //span[text()='${text}']`, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-            if (elements.snapshotLength > 0) {
-                target = elements.snapshotItem(0);
+        // Ищем текстовую ноду с точным совпадением
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+        let node;
+        while (node = walker.nextNode()) {
+            if (node.nodeValue.trim() === text) {
+                let rect = node.parentElement.getBoundingClientRect();
+                // Проверяем, что элемент видимый и находится слева
+                if (rect.width > 0 && rect.left < window.innerWidth * 0.5) {
+                    target = node.parentElement;
+                    break;
+                }
             }
         }
         
         if (target) {
-            let clickable = target.closest('a') || target.closest('li') || target.closest('[class*="item"]') || target;
+            let clickable = target.closest('a') || target.closest('button') || target.closest('li') || target.closest('[class*="item"]') || target;
             clickable.click();
             clearInterval(interval);
         }
