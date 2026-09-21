@@ -57,14 +57,14 @@ if (originalBtn) {
 
 
 function hideAllContainers() {
-    ['loading', 'docx-container', 'luckysheet-iframe', 'pdf-container', 'rtf-container', 'img-container', 'zip-container', 'text-container', 'media-container', 'unsupported-container', 'odt-container'].forEach(id => {
+    ['loading', 'docx-container', 'luckysheet-iframe', 'pdf-container', 'rtf-container', 'img-container', 'zip-container', 'text-container', 'media-container', 'unsupported-container', 'odt-container', 'pptx-container'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.style.display = 'none';
             if (id === 'zip-container') document.getElementById('zip-list').innerHTML = '';
             if (id === 'text-container') el.textContent = '';
             if (id === 'media-container') el.innerHTML = '';
-            if (id === 'rtf-container' || id === 'odt-container') el.innerHTML = '';
+            if (id === 'rtf-container' || id === 'odt-container' || id === 'pptx-container') el.innerHTML = '';
             if (id === 'docx-container') el.innerHTML = '';
         }
     });
@@ -172,6 +172,127 @@ async function renderBlob(blob, fileName, isInnerFile = false) {
                     loadingEl.innerHTML = '<span style="color:red; font-weight:bold;">Ошибка чтения Excel:</span><br>' + err;
                 }
             });
+        } else if (ext === 'pptx') {
+            loadingEl.style.display = 'none';
+            const container = document.getElementById('pptx-container');
+            container.style.display = 'block';
+            
+            try {
+                const jszip = new JSZip();
+                const zip = await jszip.loadAsync(blob);
+                
+                // Find all slide xml files
+                const slideFiles = [];
+                zip.folder("ppt/slides").forEach((relativePath, file) => {
+                    if (relativePath.match(/^slide\d+\.xml$/)) {
+                        slideFiles.push({
+                            name: relativePath,
+                            file: file,
+                            num: parseInt(relativePath.replace('slide', '').replace('.xml', ''))
+                        });
+                    }
+                });
+                
+                slideFiles.sort((a, b) => a.num - b.num);
+                
+                if (slideFiles.length === 0) {
+                    throw new Error('Не найдено слайдов в презентации');
+                }
+                
+                for (let slide of slideFiles) {
+                    const slideDiv = document.createElement('div');
+                    slideDiv.style.border = '1px solid #ccc';
+                    slideDiv.style.marginBottom = '20px';
+                    slideDiv.style.padding = '20px';
+                    slideDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                    slideDiv.style.background = 'white';
+                    slideDiv.style.minHeight = '300px';
+                    slideDiv.style.borderRadius = '8px';
+                    slideDiv.style.position = 'relative';
+                    
+                    const slideTitle = document.createElement('div');
+                    slideTitle.style.position = 'absolute';
+                    slideTitle.style.top = '10px';
+                    slideTitle.style.left = '10px';
+                    slideTitle.style.color = '#999';
+                    slideTitle.style.fontSize = '12px';
+                    slideTitle.innerText = 'Слайд ' + slide.num;
+                    slideDiv.appendChild(slideTitle);
+                    
+                    const contentDiv = document.createElement('div');
+                    contentDiv.style.marginTop = '20px';
+                    contentDiv.style.fontSize = '18px';
+                    contentDiv.style.lineHeight = '1.5';
+                    
+                    const xmlString = await slide.file.async('string');
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(xmlString, "text/xml");
+                    
+                    
+                    // Extract images
+                    const relsFile = zip.file(`ppt/slides/_rels/slide${slide.num}.xml.rels`);
+                    const relMap = {};
+                    if (relsFile) {
+                        const relsXml = await relsFile.async('string');
+                        const relsDoc = parser.parseFromString(relsXml, 'text/xml');
+                        const rels = relsDoc.getElementsByTagName('Relationship');
+                        for (let rel of rels) {
+                            relMap[rel.getAttribute('Id')] = rel.getAttribute('Target');
+                        }
+                    }
+
+                    // Elements inside spTree can be text or pictures
+                    const spTree = doc.getElementsByTagName('p:spTree')[0];
+                    if (spTree) {
+                        for (let child of spTree.children) {
+                            if (child.tagName === 'p:sp') {
+                                // Text shape
+                                const paragraphs = child.getElementsByTagName('a:p');
+                                for (let p of paragraphs) {
+                                    const pEl = document.createElement('p');
+                                    pEl.style.margin = '0 0 10px 0';
+                                    const texts = p.getElementsByTagName('a:t');
+                                    let pText = '';
+                                    for (let t of texts) {
+                                        pText += t.textContent;
+                                    }
+                                    if (pText.trim() === '') pEl.style.minHeight = '1em';
+                                    else pEl.textContent = pText;
+                                    contentDiv.appendChild(pEl);
+                                }
+                            } else if (child.tagName === 'p:pic') {
+                                // Picture
+                                const blip = child.getElementsByTagName('a:blip')[0];
+                                if (blip) {
+                                    const embedId = blip.getAttribute('r:embed');
+                                    const target = relMap[embedId];
+                                    if (target) {
+                                        // target is usually "../media/image1.png"
+                                        const imgPath = target.replace('../', 'ppt/');
+                                        const imgFile = zip.file(imgPath);
+                                        if (imgFile) {
+                                            const imgBlob = await imgFile.async('blob');
+                                            const imgEl = document.createElement('img');
+                                            imgEl.src = URL.createObjectURL(imgBlob);
+                                            imgEl.style.maxWidth = '100%';
+                                            imgEl.style.maxHeight = '300px';
+                                            imgEl.style.display = 'block';
+                                            imgEl.style.margin = '10px 0';
+                                            contentDiv.appendChild(imgEl);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    slideDiv.appendChild(contentDiv);
+
+                    container.appendChild(slideDiv);
+                }
+            } catch (err) {
+                container.innerHTML = '<div style="color:red; font-family:sans-serif;">Ошибка чтения PPTX: ' + err.message + '</div>';
+            }
+        
         } else if (ext === 'odt') {
             loadingEl.style.display = 'none';
             const container = document.getElementById('odt-container');
@@ -385,6 +506,7 @@ async function loadFile() {
         if (ext === 'rtf') mimeType = 'application/rtf';
         if (ext === 'zip') mimeType = 'application/zip';
         if (ext === 'odt') mimeType = 'application/vnd.oasis.opendocument.text';
+        if (ext === 'pptx') mimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
         if (['txt','csv','json','xml','md','js','css','html'].includes(ext)) mimeType = 'text/plain';
         if (['mp4','webm','ogg'].includes(ext)) mimeType = 'video/' + ext;
         if (['mp3','wav','ogg'].includes(ext)) mimeType = 'audio/' + (ext==='mp3'?'mpeg':ext);

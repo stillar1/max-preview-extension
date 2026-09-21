@@ -8,7 +8,7 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
     const filename = downloadItem.filename.toLowerCase();
     
     // Проверяем расширение файла (временно убрали строгую проверку isMaxDomain, так как файлы могут лежать на сторонних серверах типа S3/CDN)
-    if (filename.match(/\.(pdf|docx|xlsx|xls|png|jpeg|jpg|rtf|zip|odt|txt|csv|json|xml|md|js|css|html|mp3|wav|ogg|mp4|webm|avi|mov|mkv)$/i)) {
+    if (filename.match(/\.(pdf|docx|xlsx|xls|png|jpeg|jpg|rtf|zip|pptx|odt|txt|csv|json|xml|md|js|css|html|mp3|wav|ogg|mp4|webm|avi|mov|mkv)$/i)) {
         // Отменяем системное скачивание файла
         chrome.downloads.cancel(downloadItem.id, () => {
             // Открываем нашу вкладку предпросмотра
