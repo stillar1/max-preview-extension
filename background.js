@@ -39,6 +39,7 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
                 chrome.downloads.cancel(downloadItem.id, () => {
                     const viewerUrl = chrome.runtime.getURL(`viewer/viewer.html?url=${encodeURIComponent(downloadItem.url)}&name=${encodeURIComponent(downloadItem.filename)}`);
                     chrome.tabs.create({ url: viewerUrl });
+                    suggest(); // REQUIRED BY CHROME API
                 });
             } else {
                 suggest();

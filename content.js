@@ -53,24 +53,28 @@ function getCssPath(el) {
 
 // Запоминаем последний клик в левой части экрана (список чатов)
 document.addEventListener('click', (e) => {
-    // Сохраняем время клика для background.js (перехват скачиваний)
-    chrome.storage.local.set({ max_last_click: Date.now() });
+    try {
+        if (chrome && chrome.storage && chrome.storage.local) {
+            chrome.storage.local.set({ max_last_click: Date.now() });
+        }
+    } catch (err) { console.error(err); }
 
-    // Обрабатываем авто-открытие чата
-    if (e.clientX < window.innerWidth * 0.45) {
-        // Ищем осмысленный элемент
-        let target = e.target.closest('a') || e.target.closest('li') || e.target.closest('[class*="item"]') || e.target;
-        
-        let path = getCssPath(target);
-        if (path) {
-            localStorage.setItem('max_last_chat_path', path);
+    try {
+        // Обрабатываем авто-открытие чата (левая половина экрана)
+        if (e.clientX < window.innerWidth * 0.5) {
+            let target = e.target.closest('a') || e.target.closest('li') || e.target.closest('[class*="item"]') || e.target;
+            
+            let path = getCssPath(target);
+            if (path) {
+                localStorage.setItem('max_last_chat_path', path);
+            }
+            
+            let text = target.innerText ? target.innerText.trim().split('\n')[0] : '';
+            if (text && text.length > 2 && text.length < 50) {
+                localStorage.setItem('max_last_chat_text', text);
+            }
         }
-        
-        let text = target.innerText ? target.innerText.trim().split('\n')[0] : '';
-        if (text && text.length > 2 && text.length < 40) {
-            localStorage.setItem('max_last_chat_text', text);
-        }
-    }
+    } catch (err) { console.error(err); }
 }, true);
 
 // Восстанавливаем при загрузке

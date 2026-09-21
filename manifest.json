@@ -5,7 +5,8 @@
   "description": "Предпросмотр Office-документов, архивов, кода (с запуском!) и медиа в мессенджере MAX.",
   "permissions": [
     "tabs",
-    "downloads"
+    "downloads",
+    "storage"
   ],
   "host_permissions": [
     "*://web.max.ru/*"
