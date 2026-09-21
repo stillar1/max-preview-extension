@@ -57,7 +57,7 @@ if (originalBtn) {
 
 
 function hideAllContainers() {
-    ['loading', 'docx-container', 'luckysheet-iframe', 'pdf-container', 'rtf-container', 'img-container', 'zip-container', 'text-container', 'media-container', 'unsupported-container', 'odt-container', 'pptx-container'].forEach(id => {
+    ['loading', 'docx-container', 'luckysheet-iframe', 'pdf-container', 'rtf-container', 'img-container', 'zip-container', 'text-container', 'media-container', 'unsupported-container', 'odt-container', 'pptx-container', 'code-container'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.style.display = 'none';
@@ -447,11 +447,75 @@ async function renderBlob(blob, fileName, isInnerFile = false) {
             } catch (err) {
                 list.innerHTML = '<li style="color:red;">Ошибка чтения архива: ' + err.message + '</li>';
             }
-        } else if (['txt','csv','json','xml','md','js','css','html'].includes(ext)) {
-            loadingEl.style.display = 'none';
-            const container = document.getElementById('text-container');
-            container.style.display = 'block';
-            container.textContent = await blob.text();
+        } else if (['py','js','c','cpp','java','cs','go','php','rb','swift','ts','sh','html','css','xml','json','md'].includes(ext) || ext === 'txt' || ext === 'csv') {
+
+            if (['py','js','c','cpp','java','cs','go','php','rb','swift','ts','sh','html','css','xml','json','md'].includes(ext)) {
+                loadingEl.style.display = 'none';
+                const container = document.getElementById('code-container');
+                container.style.display = 'block';
+                
+                const codeContent = await blob.text();
+                const codeEl = document.getElementById('code-content');
+                codeEl.textContent = codeContent;
+                codeEl.className = 'language-' + ext;
+                
+                document.getElementById('code-title').textContent = 'Исходный код (' + ext + ')';
+                
+                // Highlight syntax
+                if (window.hljs) {
+                    hljs.highlightElement(codeEl);
+                }
+                
+                // Setup Run Button
+                const runBtn = document.getElementById('runCodeBtn');
+                const outputWrapper = document.getElementById('code-output-wrapper');
+                const outputEl = document.getElementById('code-output');
+                const iframe = document.getElementById('code-runner-iframe');
+                
+                outputWrapper.style.display = 'none';
+                outputEl.textContent = '';
+                
+                if (ext === 'js' || ext === 'py') {
+                    runBtn.style.display = 'block';
+                    runBtn.onclick = () => {
+                        outputWrapper.style.display = 'block';
+                        outputEl.textContent = 'Выполнение...\n';
+                        outputEl.style.color = '#d4d4d4';
+                        
+                        // Send message to sandboxed iframe
+                        iframe.contentWindow.postMessage({
+                            action: 'runCode',
+                            code: codeContent,
+                            lang: ext,
+                            messageId: Date.now()
+                        }, '*');
+                    };
+                    
+                    // Listen for results
+                    window.addEventListener('message', (event) => {
+                        if (event.source !== iframe.contentWindow) return;
+                        if (event.data.action === 'runCodeResult') {
+                            outputEl.textContent = event.data.output || '(нет вывода)\n';
+                            if (event.data.isError) {
+                                outputEl.style.color = '#ff5555';
+                            } else {
+                                outputEl.style.color = '#d4d4d4';
+                            }
+                            // Auto scroll to bottom
+                            outputEl.scrollTop = outputEl.scrollHeight;
+                        }
+                    });
+                    
+                } else {
+                    runBtn.style.display = 'none';
+                }
+                
+            } else if (['txt','csv'].includes(ext)) {
+                loadingEl.style.display = 'none';
+                const container = document.getElementById('text-container');
+                container.style.display = 'block';
+                container.textContent = await blob.text();
+    
         } else if (['mp4','webm','ogg','mp3','wav'].includes(ext)) {
             loadingEl.style.display = 'none';
             const container = document.getElementById('media-container');

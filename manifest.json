@@ -46,11 +46,18 @@
         "viewer/viewer.css",
         "viewer/libs/*",
         "viewer/libs/luckysheet/*",
-        "viewer/libs/luckysheet/assets/iconfont/*"
+        "viewer/libs/luckysheet/assets/iconfont/*",
+        "viewer/runner.html",
+        "viewer/runner.js"
       ],
       "matches": [
         "<all_urls>"
       ]
     }
-  ]
+  ],
+  "sandbox": {
+    "pages": [
+      "viewer/runner.html"
+    ]
+  }
 }

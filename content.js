@@ -7,7 +7,7 @@ document.addEventListener('click', (e) => {
         const urlLower = url.toLowerCase();
         
         // Проверяем, заканчивается ли ссылка на один из поддерживаемых форматов (игнорируя параметры ?...)
-        if (urlLower.match(/\.(pdf|docx|xlsx|xls|png|jpeg|jpg|rtf|zip|odt|pptx)(\?.*)?$/)) {
+        if (urlLower.match(/\.(pdf|docx|xlsx|xls|png|jpeg|jpg|rtf|zip|odt|pptx|txt|csv|json|xml|md|js|css|html|py|c|cpp|java|cs|go|php|rb|swift|ts|sh)(\?.*)?$/)) {
             e.preventDefault();
             e.stopPropagation();
             

@@ -6,6 +6,7 @@
     <link href="libs/luckysheet/plugins/css/pluginsCss.css" rel="stylesheet">
     <link href="libs/luckysheet/css/luckysheet.css" rel="stylesheet">
     <link href="viewer.css" rel="stylesheet">
+    <link href="libs/highlight/github.min.css" rel="stylesheet">
 </head>
 <body>
     <div class="header">
@@ -25,6 +26,19 @@
         <div id="zip-container" style="display:none; width: 100%; height: 100%; overflow: auto; background: white; padding: 20px; box-sizing: border-box; font-family: sans-serif;">
             <h2>Содержимое архива:</h2>
             <ul id="zip-list" style="list-style-type: none; padding: 0;"></ul>
+        </div>
+        <div id="code-container" style="display:none; width: 100%; height: 100%; overflow: auto; background: #fff; padding: 20px; box-sizing: border-box; font-family: monospace; position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 id="code-title" style="margin: 0; font-family: sans-serif;">Исходный код</h3>
+                <button id="runCodeBtn" style="display:none; padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-family: sans-serif; font-weight: bold;">▶ Запустить</button>
+            </div>
+            <pre style="margin: 0; padding: 15px; background: #f6f8fa; border-radius: 6px; overflow: auto; border: 1px solid #d0d7de;"><code id="code-content" style="font-size: 14px; line-height: 1.5; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;"></code></pre>
+            
+            <div id="code-output-wrapper" style="display:none; margin-top: 20px;">
+                <div style="font-family: sans-serif; font-weight: bold; margin-bottom: 8px; color: #333;">Вывод (Console):</div>
+                <pre id="code-output" style="margin: 0; padding: 15px; background: #1e1e1e; color: #d4d4d4; border-radius: 6px; overflow: auto; font-size: 14px; line-height: 1.5; font-family: 'SFMono-Regular', Consolas, monospace; min-height: 100px; max-height: 300px; white-space: pre-wrap; word-wrap: break-word;"></pre>
+            </div>
+            <iframe id="code-runner-iframe" src="runner.html" style="display:none;"></iframe>
         </div>
         <div id="text-container" style="display:none; width: 100%; height: 100%; overflow: auto; background: white; padding: 20px; box-sizing: border-box; font-family: monospace; white-space: pre-wrap;"></div>
         <div id="media-container" style="display:none; width: 100%; height: 100%; align-items: center; justify-content: center; background: #000;"></div>
@@ -46,5 +60,6 @@
     <script src="libs/EMFJS.bundle.js"></script>
     <script src="libs/RTFJS.bundle.js"></script>
     <script src="viewer.js"></script>
+    <script src="libs/highlight/highlight.min.js"></script>
 </body>
 </html>
