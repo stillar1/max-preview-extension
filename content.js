@@ -25,53 +25,84 @@ document.addEventListener('click', (e) => {
 }, true); // Используем capture phase, чтобы перехватить клик до того, как его обработает React/Vue
 
 
-// Автоматическое сохранение и открытие последнего чата
-document.addEventListener('click', (e) => {
-    if (e.clientX < window.innerWidth * 0.4) {
-        let target = e.target.closest('a') || e.target.closest('li') || e.target.closest('[class*="chat"]') || e.target.closest('[class*="item"]');
-        if (target) {
-            let identifier = target.getAttribute('href') || target.getAttribute('data-id');
-            if (identifier && identifier !== '#' && identifier !== '/') {
-                localStorage.setItem('max_last_chat_id', identifier);
-                localStorage.removeItem('max_last_chat_text');
-            } else {
-                let text = target.innerText.trim().split('\n')[0];
-                if (text && text.length > 2 && text.length < 40) {
-                    localStorage.setItem('max_last_chat_text', text);
-                    localStorage.removeItem('max_last_chat_id');
-                }
+
+
+
+// Вспомогательная функция для получения точного CSS пути элемента
+function getCssPath(el) {
+    if (!(el instanceof Element)) return '';
+    let path = [];
+    while (el.nodeType === Node.ELEMENT_NODE) {
+        let selector = el.nodeName.toLowerCase();
+        if (el.id) {
+            selector += '#' + el.id;
+            path.unshift(selector);
+            break;
+        } else {
+            let sib = el, nth = 1;
+            while (sib = sib.previousElementSibling) {
+                if (sib.nodeName.toLowerCase() === selector) nth++;
             }
+            if (nth !== 1 || el.nextElementSibling) selector += ":nth-of-type("+nth+")";
+        }
+        path.unshift(selector);
+        el = el.parentNode;
+    }
+    return path.join(" > ");
+}
+
+// Запоминаем последний клик в левой части экрана (список чатов)
+document.addEventListener('click', (e) => {
+    // Сохраняем время клика для background.js (перехват скачиваний)
+    chrome.storage.local.set({ max_last_click: Date.now() });
+
+    // Обрабатываем авто-открытие чата
+    if (e.clientX < window.innerWidth * 0.45) {
+        // Ищем осмысленный элемент
+        let target = e.target.closest('a') || e.target.closest('li') || e.target.closest('[class*="item"]') || e.target;
+        
+        let path = getCssPath(target);
+        if (path) {
+            localStorage.setItem('max_last_chat_path', path);
+        }
+        
+        let text = target.innerText ? target.innerText.trim().split('\n')[0] : '';
+        if (text && text.length > 2 && text.length < 40) {
+            localStorage.setItem('max_last_chat_text', text);
         }
     }
 }, true);
 
+// Восстанавливаем при загрузке
 window.addEventListener('load', () => {
-    setTimeout(() => {
-        let id = localStorage.getItem('max_last_chat_id');
-        let text = localStorage.getItem('max_last_chat_text');
+    // Повторяем попытки клика, так как React/Vue могут рендериться с задержкой
+    let attempts = 0;
+    let interval = setInterval(() => {
+        attempts++;
+        if (attempts > 10) { // 10 попыток по 500мс = 5 секунд
+            clearInterval(interval);
+            return;
+        }
         
+        let path = localStorage.getItem('max_last_chat_path');
+        let text = localStorage.getItem('max_last_chat_text');
         let target = null;
-        if (id) {
-            target = document.querySelector(`[href="${id}"], [data-id="${id}"]`);
+        
+        if (path) {
+            try { target = document.querySelector(path); } catch (e) {}
         }
         
         if (!target && text) {
-            // Ищем элементы с таким текстом
-            let elements = document.evaluate(`//div[text()='${text}'] | //span[text()='${text}'] | //a[text()='${text}']`, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-            for (let i = 0; i < elements.snapshotLength; i++) {
-                let el = elements.snapshotItem(i);
-                let rect = el.getBoundingClientRect();
-                if (rect.left < window.innerWidth * 0.4 && rect.width > 0) {
-                    target = el;
-                    break;
-                }
+            let elements = document.evaluate(`//div[text()='${text}'] | //span[text()='${text}']`, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+            if (elements.snapshotLength > 0) {
+                target = elements.snapshotItem(0);
             }
         }
         
-        if (target && typeof target.click === 'function') {
-            // Кликаем по самому элементу или его родителю
+        if (target) {
             let clickable = target.closest('a') || target.closest('li') || target.closest('[class*="item"]') || target;
             clickable.click();
+            clearInterval(interval);
         }
-    }, 1500);
+    }, 500);
 });
