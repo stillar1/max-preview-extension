@@ -5,9 +5,19 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
         return;
     }
 
+
     const filename = downloadItem.filename.toLowerCase();
     
-    // Проверяем расширение файла (временно убрали строгую проверку isMaxDomain, так как файлы могут лежать на сторонних серверах типа S3/CDN)
+    // Строго проверяем, что скачивание инициировано с web.max.ru или его поддоменов
+    const isFromMax = (downloadItem.url && downloadItem.url.includes('max.ru')) || 
+                      (downloadItem.referrer && downloadItem.referrer.includes('max.ru')) ||
+                      (downloadItem.finalUrl && downloadItem.finalUrl.includes('max.ru'));
+                      
+    if (!isFromMax) {
+        suggest();
+        return;
+    }
+
     if (filename.match(/\.(pdf|docx|xlsx|xls|png|jpeg|jpg|rtf|zip|pptx|odt|txt|csv|py|c|cpp|java|cs|go|php|rb|swift|ts|sh|json|xml|md|js|css|html|mp3|wav|ogg|mp4|webm|avi|mov|mkv)$/i)) {
         // Отменяем системное скачивание файла
         chrome.downloads.cancel(downloadItem.id, () => {
