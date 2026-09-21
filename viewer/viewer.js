@@ -515,7 +515,7 @@ async function renderBlob(blob, fileName, isInnerFile = false) {
                 const container = document.getElementById('text-container');
                 container.style.display = 'block';
                 container.textContent = await blob.text();
-    
+            }
         } else if (['mp4','webm','ogg','mp3','wav'].includes(ext)) {
             loadingEl.style.display = 'none';
             const container = document.getElementById('media-container');
