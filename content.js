@@ -65,12 +65,28 @@ document.addEventListener('click', (e) => {
         if (e.clientX < window.innerWidth * 0.5) {
             let target = e.target.closest('a') || e.target.closest('li') || e.target.closest('[class*="item"]') || e.target;
             
-            // Берем самую первую непустую строку текста
-            let textLines = target.innerText ? target.innerText.split('\n').map(s=>s.trim()).filter(s=>s) : [];
-            if (textLines.length > 0) {
-                let text = textLines[0];
-                if (text.length >= 2 && text.length < 50) {
-                    localStorage.setItem('max_last_chat_text', text);
+            // 1. Пробуем найти явный идентификатор (href или data-id)
+            let identifier = target.getAttribute('href') || target.getAttribute('data-id');
+            if (!identifier) {
+                let parent = target.closest('[data-id], a');
+                if (parent) identifier = parent.getAttribute('href') || parent.getAttribute('data-id');
+            }
+
+            if (identifier && identifier !== '#' && identifier !== '/' && !identifier.startsWith('javascript:')) {
+                localStorage.setItem('max_last_chat_id', identifier);
+                localStorage.removeItem('max_last_chat_text');
+            } else {
+                // 2. Если нет ID, берем самую длинную строку текста (обычно это имя контакта)
+                let textLines = target.innerText ? target.innerText.split('\n').map(s=>s.trim()).filter(s=>s) : [];
+                let longestText = '';
+                for (let t of textLines) {
+                    if (t.length > longestText.length && t.length < 50) {
+                        longestText = t;
+                    }
+                }
+                if (longestText.length >= 2) {
+                    localStorage.setItem('max_last_chat_text', longestText);
+                    localStorage.removeItem('max_last_chat_id');
                 }
             }
             
@@ -86,37 +102,47 @@ document.addEventListener('click', (e) => {
 
 // Восстанавливаем при загрузке
 window.addEventListener('load', () => {
-    // 1. Пытаемся восстановить по URL (если при обновлении скинуло на главную)
+    // 1. Пытаемся восстановить по URL
     let lastUrl = localStorage.getItem('max_last_url');
     if (lastUrl && lastUrl !== location.href && (location.pathname === '/' || location.pathname === '' || location.pathname === '/messages')) {
-        location.href = lastUrl;
-        return; // Если редирект сработал, дальше не идем
+        // Защита от бесконечного цикла редиректов
+        if (!sessionStorage.getItem('max_redirected')) {
+            sessionStorage.setItem('max_redirected', 'true');
+            location.href = lastUrl;
+            return;
+        }
     }
+    sessionStorage.removeItem('max_redirected');
 
-    // 2. Пытаемся восстановить кликом по тексту в DOM
+    // 2. Пытаемся восстановить кликом по DOM
+    let id = localStorage.getItem('max_last_chat_id');
     let text = localStorage.getItem('max_last_chat_text');
-    if (!text) return;
+    if (!id && !text) return;
 
     let attempts = 0;
     let interval = setInterval(() => {
         attempts++;
-        if (attempts > 15) { // 15 попыток = 7.5 секунд
+        if (attempts > 15) { // 7.5 секунд
             clearInterval(interval);
             return;
         }
         
         let target = null;
         
-        // Ищем текстовую ноду с точным совпадением
-        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
-        let node;
-        while (node = walker.nextNode()) {
-            if (node.nodeValue.trim() === text) {
-                let rect = node.parentElement.getBoundingClientRect();
-                // Проверяем, что элемент видимый и находится слева
-                if (rect.width > 0 && rect.left < window.innerWidth * 0.5) {
-                    target = node.parentElement;
-                    break;
+        if (id) {
+            try { target = document.querySelector(`[href="${id}"], [data-id="${id}"]`); } catch(e) {}
+        }
+        
+        if (!target && text) {
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+            let node;
+            while (node = walker.nextNode()) {
+                if (node.nodeValue.trim() === text) {
+                    let rect = node.parentElement.getBoundingClientRect();
+                    if (rect.width > 0 && rect.left < window.innerWidth * 0.5) {
+                        target = node.parentElement;
+                        break;
+                    }
                 }
             }
         }
