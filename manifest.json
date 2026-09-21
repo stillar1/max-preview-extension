@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MAX File Previewer",
   "version": "1.0",
-  "description": "Предпросмотр файлов (DOCX, XLSX, PDF, Картинки) для мессенджера MAX вместо скачивания",
+  "description": "Предпросмотр Office-документов, архивов, кода (с запуском!) и медиа в мессенджере MAX.",
   "permissions": [
     "tabs",
     "downloads"
