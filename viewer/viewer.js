@@ -118,7 +118,7 @@ async function renderBlob(blob, fileName, isInnerFile = false) {
             loadingEl.style.display = 'none';
             const container = document.getElementById('docx-container');
             container.style.display = 'block';
-            await docx.renderAsync(blob, container, null, { experimental: true, useBase64URL: true, ignoreWidth: false, breakPages: true });
+            await docx.renderAsync(blob, container);
         } else if (ext === 'xlsx' || ext === 'xls') {
             const iframe = document.getElementById('luckysheet-iframe');
             iframe.style.display = 'block';
