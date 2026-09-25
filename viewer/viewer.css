@@ -26,3 +26,6 @@ body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, Bl
     word-break: break-word;
     overflow-wrap: break-word;
 }
+
+#pdf-container { background: #525659; overflow-y: auto; text-align: center; padding: 20px; box-sizing: border-box; }
+.pdf-page { margin: 0 auto 20px auto; box-shadow: 0 0 10px rgba(0,0,0,0.5); max-width: 100%; display: block; }

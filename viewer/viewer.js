@@ -94,12 +94,7 @@ async function renderBlob(blob, fileName, isInnerFile = false) {
     let ext = extMatch ? extMatch[1].toLowerCase() : '';
 
     try {
-        if (ext === 'pdf') {
-            loadingEl.style.display = 'none';
-            const container = document.getElementById('pdf-container');
-            container.src = URL.createObjectURL(blob);
-            container.style.display = 'block';
-        } else if (ext === 'rtf') {
+        if (ext === 'rtf') {
             loadingEl.style.display = 'none';
             const container = document.getElementById('rtf-container');
             container.style.display = 'block';
@@ -549,15 +544,20 @@ async function loadFile() {
         
         loadingEl.innerHTML = `Загрузка файла...`;
         
-        const response = await fetch(fileUrl);
-        if (!response.ok) throw new Error("HTTP " + response.status);
-        
         const extMatch = originalFileName.match(/\.([a-zA-Z0-9]+)$/);
         let ext = extMatch ? extMatch[1].toLowerCase() : '';
         if (!ext) {
             const urlExtMatch = fileUrl.split('?')[0].match(/\.([a-zA-Z0-9]+)$/);
             if (urlExtMatch) ext = urlExtMatch[1].toLowerCase();
         }
+
+        if (ext === 'pdf') {
+            await renderPdfFromUrl(fileUrl, originalFileName);
+            return;
+        }
+
+        const response = await fetch(fileUrl);
+        if (!response.ok) throw new Error("HTTP " + response.status);
         
         // ПРИНУДИТЕЛЬНО задаем правильный MIME-тип
         let mimeType = 'application/octet-stream';
@@ -589,3 +589,54 @@ async function loadFile() {
 
 // Запускаем файл сразу без кнопки
 loadFile();
+
+
+async function renderPdfFromUrl(url, fileName) {
+    const loadingEl = document.getElementById('loading');
+    loadingEl.style.display = 'none';
+    const container = document.getElementById('pdf-container');
+    container.style.display = 'block';
+    container.innerHTML = '';
+    
+    hideAllContainers();
+    container.style.display = 'block';
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'libs/pdfjs/pdf.worker.min.js';
+    
+    try {
+        const loadingTask = pdfjsLib.getDocument(url);
+        const pdfDoc = await loadingTask.promise;
+        
+        for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'pdf-page';
+            container.appendChild(canvas);
+            
+            const renderPage = async () => {
+                try {
+                    const page = await pdfDoc.getPage(pageNum);
+                    const defaultViewport = page.getViewport({ scale: 1.0 });
+                    const containerWidth = container.clientWidth - 40;
+                    let scale = containerWidth / defaultViewport.width;
+                    if (scale > 1.5) scale = 1.5;
+                    
+                    const viewport = page.getViewport({ scale: scale });
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+                } catch (e) {
+                    console.error("Page render error", e);
+                }
+            };
+            
+            if (pageNum <= 2) {
+                await renderPage();
+            } else {
+                setTimeout(renderPage, (pageNum - 2) * 200);
+            }
+        }
+    } catch (err) {
+        console.error("PDF load error", err);
+        container.innerHTML = '<div style="color:red; padding:20px;">Ошибка при загрузке PDF. Возможно, файл недоступен или поврежден.</div>';
+    }
+}
